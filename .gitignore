@@ -1,0 +1,9 @@
+__pycache__/
+*.pyc
+.claude-flow/
+train.parquet
+raw_audio/
+species_summary.json
+acoustic_features_extra.json
+acoustic_features_mammals.json
+acoustic_features_noaa.json

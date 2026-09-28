@@ -1,0 +1,1081 @@
+<title>AnimalSpeak Explorer</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=Petrona:ital,wght@0,400;0,500;0,600;1,400;1,500&family=IBM+Plex+Sans:wght@400;500;600&family=IBM+Plex+Mono:wght@400;500&display=swap" rel="stylesheet">
+<script src="https://cdn.jsdelivr.net/npm/plotly.js-dist-min@2.35.2/plotly.min.js"></script>
+
+<style>
+  :root{
+    color-scheme: light;
+    --bg:            #f9f9f7;
+    --surface:       #fcfcfb;
+    --surface-raised: #ffffff;
+    --text:          #0b0b0b;
+    --text-2:        #52514e;
+    --muted:         #898781;
+    --border:        #e1e0d9;
+    --border-strong: #c3c2b7;
+    --accent:        #2a78d6;
+    --accent-ink:    #ffffff;
+    --seq-100: #cde2fb; --seq-200: #9ec5f4; --seq-300: #6da7ec;
+    --seq-450: #2a78d6; --seq-550: #1c5cab; --seq-700: #0d366b;
+    --cat-bird: #2a78d6; --cat-mammal: #eb6834; --cat-amphibian: #1baf7a;
+    --cat-insect: #eda100; --cat-reptile: #e87ba4;
+    --shadow: 0 1px 2px rgba(11,11,11,0.05), 0 6px 20px -8px rgba(11,11,11,0.12);
+  }
+  @media (prefers-color-scheme: dark){
+    :root:not([data-theme="light"]){
+      color-scheme: dark;
+      --bg:            #0d0d0d;
+      --surface:       #171716;
+      --surface-raised: #1e1e1c;
+      --text:          #ffffff;
+      --text-2:        #c3c2b7;
+      --muted:         #8f8d86;
+      --border:        #2c2c2a;
+      --border-strong: #3a3a37;
+      --accent:        #3987e5;
+      --accent-ink:    #ffffff;
+      --seq-100: #17324f; --seq-200: #1c4674; --seq-300: #205a95;
+      --seq-450: #3987e5; --seq-550: #6da7ec; --seq-700: #cde2fb;
+      --cat-bird: #3987e5; --cat-mammal: #d95926; --cat-amphibian: #199e70;
+      --cat-insect: #c98500; --cat-reptile: #d55181;
+      --shadow: 0 1px 2px rgba(0,0,0,0.3), 0 10px 30px -10px rgba(0,0,0,0.5);
+    }
+  }
+  :root[data-theme="dark"]{
+    color-scheme: dark;
+    --bg:            #0d0d0d;
+    --surface:       #171716;
+    --surface-raised: #1e1e1c;
+    --text:          #ffffff;
+    --text-2:        #c3c2b7;
+    --muted:         #8f8d86;
+    --border:        #2c2c2a;
+    --border-strong: #3a3a37;
+    --accent:        #3987e5;
+    --accent-ink:    #ffffff;
+    --seq-100: #17324f; --seq-200: #1c4674; --seq-300: #205a95;
+    --seq-450: #3987e5; --seq-550: #6da7ec; --seq-700: #cde2fb;
+    --cat-bird: #3987e5; --cat-mammal: #d95926; --cat-amphibian: #199e70;
+    --cat-insect: #c98500; --cat-reptile: #d55181;
+    --shadow: 0 1px 2px rgba(0,0,0,0.3), 0 10px 30px -10px rgba(0,0,0,0.5);
+  }
+
+  *{ box-sizing: border-box; }
+  body{
+    background: var(--bg);
+    color: var(--text);
+    font-family: "IBM Plex Sans", system-ui, -apple-system, "Segoe UI", sans-serif;
+    padding-inline: 20px;
+    padding-block: 28px 48px;
+    max-width: 1180px;
+    margin: 0 auto;
+  }
+  h1,h2,h3{ font-family: "Petrona", Georgia, serif; font-weight: 500; margin: 0; text-wrap: balance; }
+  .sci{ font-style: italic; font-family: "Petrona", Georgia, serif; }
+  .mono{ font-family: "IBM Plex Mono", ui-monospace, monospace; font-variant-numeric: tabular-nums; }
+
+  .eyebrow{
+    font-family: "IBM Plex Mono", monospace;
+    font-size: 11.5px;
+    letter-spacing: 0.09em;
+    text-transform: uppercase;
+    color: var(--accent);
+    margin: 0 0 10px;
+    display:flex; align-items:center; gap:8px;
+  }
+  .eyebrow::before{
+    content:""; width:7px; height:7px; border-radius:50%;
+    background: var(--eyebrow-dot, var(--accent)); display:inline-block;
+  }
+  header{ margin-bottom: 26px; }
+  h1{ font-size: clamp(32px, 5.5vw, 46px); font-weight: 600; letter-spacing: -0.01em; }
+  .lede{
+    margin: 12px 0 0;
+    max-width: 62ch;
+    font-size: 15px;
+    line-height: 1.6;
+    color: var(--text-2);
+  }
+  .lede b{ color: var(--text); font-weight: 500; }
+
+  .stats{
+    display: grid;
+    grid-template-columns: repeat(auto-fit, minmax(150px,1fr));
+    gap: 10px;
+    margin: 22px 0 28px;
+  }
+  .stat{
+    background: var(--surface);
+    border: 1px solid var(--border);
+    border-radius: 10px;
+    padding: 13px 14px;
+  }
+  .stat .v{ font-family:"IBM Plex Mono",monospace; font-size: 21px; font-weight:500; letter-spacing:-0.01em; }
+  .stat .k{ font-size: 11.5px; color: var(--muted); margin-top: 3px; text-transform: uppercase; letter-spacing: 0.06em; }
+
+  #spotlight{ border-color: var(--border-strong); }
+  .spot-head{ align-items: flex-start; padding-bottom: 14px; border-bottom: 1px solid var(--border); gap: 16px; }
+  #spot-name{ font-size: clamp(24px,3.4vw,30px); line-height: 1.1; }
+  .spot-sci{ margin: 4px 0 0; font-size: 15px; font-style: italic; font-family:"Petrona",serif; color: var(--text-2); }
+  .play{
+    all: unset; flex: 0 0 auto; width: 42px; height: 42px; border-radius: 50%;
+    background: var(--accent); color: var(--accent-ink);
+    display:flex; align-items:center; justify-content:center;
+    font-size: 15px; cursor: pointer;
+  }
+  .play[disabled]{ opacity: 0.3; cursor: not-allowed; }
+  .spot-body{ display:flex; flex-direction: column; gap: 14px; padding: 16px 18px; }
+  #spot-plot{
+    width: 100%; height: 380px;
+    border-radius: 10px; background: var(--surface-raised); border: 1px solid var(--border);
+  }
+  .spot-grid{
+    display: grid; grid-template-columns: repeat(auto-fill,minmax(120px,1fr));
+    gap: 10px 14px;
+  }
+  .spot-grid .gv{ font-family:"IBM Plex Mono",monospace; font-size: 16px; font-weight: 500; letter-spacing: -0.01em; }
+  .spot-grid .gk{ font-size: 10px; text-transform: uppercase; letter-spacing: 0.06em; color: var(--muted); margin-top: 2px; }
+  .spot-note{ margin:0; padding: 0 18px 16px; font-size: 12px; color: var(--muted); }
+
+  .tag{
+    display:inline-flex; align-items:center; gap:5px;
+    font-size: 10.5px; font-family:"IBM Plex Mono",monospace;
+    text-transform: uppercase; letter-spacing: 0.05em; color: var(--text-2);
+  }
+  .tag::before{ content:""; width:7px; height:7px; border-radius:50%; background: var(--tag-color, var(--muted)); display:inline-block; }
+
+  .chips{ display:flex; flex-wrap: wrap; gap: 6px; padding: 12px 18px 0; }
+  .chip{
+    all: unset; cursor: pointer;
+    display:inline-flex; align-items:center; gap:6px;
+    font-size: 12px; font-family:"IBM Plex Sans",sans-serif;
+    padding: 5px 11px 5px 8px; border-radius: 999px;
+    border: 1px solid var(--border-strong); color: var(--text-2);
+  }
+  .chip::before{ content:""; width:7px; height:7px; border-radius:50%; background: var(--tag-color, var(--muted)); }
+  .chip.on{ border-color: var(--tag-color, var(--accent)); color: var(--text); background: color-mix(in srgb, var(--tag-color, var(--accent)) 12%, transparent); }
+
+  section{ margin-bottom: 26px; }
+  .panel{
+    background: var(--surface);
+    border: 1px solid var(--border);
+    border-radius: 14px;
+    box-shadow: var(--shadow);
+    overflow: hidden;
+  }
+  .panel-head{
+    display:flex; align-items:baseline; justify-content:space-between; gap: 12px;
+    flex-wrap: wrap;
+    padding: 16px 18px 0;
+  }
+  .panel-head h2{ font-size: 20px; font-weight: 500; }
+  .panel-head p{ margin: 4px 0 0; font-size: 12.5px; color: var(--muted); }
+
+  .controls{
+    display:flex; flex-wrap: wrap; gap: 10px 16px;
+    padding: 14px 18px 16px;
+    border-bottom: 1px solid var(--border);
+    align-items: end;
+  }
+  .field{ display:flex; flex-direction: column; gap: 5px; min-width: 150px; flex: 1 1 150px; }
+  .field label{
+    font-size: 10.5px; text-transform: uppercase; letter-spacing: 0.08em;
+    color: var(--muted); font-family:"IBM Plex Mono",monospace;
+  }
+  select{
+    font: inherit; font-size: 13.5px; color: var(--text);
+    background: var(--surface-raised);
+    border: 1px solid var(--border-strong);
+    border-radius: 7px;
+    padding: 7px 9px;
+    appearance: none;
+    background-image: linear-gradient(45deg, transparent 50%, var(--muted) 50%), linear-gradient(135deg, var(--muted) 50%, transparent 50%);
+    background-position: calc(100% - 15px) center, calc(100% - 10px) center;
+    background-size: 5px 5px, 5px 5px;
+    background-repeat: no-repeat;
+    padding-right: 26px;
+  }
+  select:focus-visible, input:focus-visible, th button:focus-visible{
+    outline: 2px solid var(--accent); outline-offset: 1px;
+  }
+
+  #plot{ width: 100%; height: 600px; }
+  #aplot{ width: 100%; height: 520px; }
+  .plot-foot{
+    display:flex; justify-content: space-between; align-items:center; flex-wrap: wrap; gap: 8px;
+    padding: 10px 18px 16px; font-size: 12px; color: var(--muted);
+  }
+  .swatch{ display:inline-flex; align-items:center; gap:6px; }
+  .ramp{
+    width: 74px; height: 8px; border-radius: 4px;
+    background: linear-gradient(90deg, var(--seq-100), var(--seq-300), var(--seq-450), var(--seq-550), var(--seq-700));
+    display:inline-block; vertical-align: middle;
+  }
+
+  .cards{
+    display: grid;
+    grid-template-columns: repeat(auto-fill, minmax(200px,1fr));
+    gap: 8px;
+    padding: 4px 18px 18px;
+  }
+  .card{
+    display:flex; align-items:center; gap: 10px;
+    background: var(--surface-raised);
+    border: 1px solid var(--border);
+    border-radius: 9px;
+    padding: 9px 10px;
+    cursor: pointer;
+    transition: border-color .15s ease, background .15s ease;
+  }
+  .card:hover{ border-color: var(--border-strong); }
+  .card.active{ border-color: var(--accent); background: color-mix(in srgb, var(--accent) 9%, var(--surface-raised)); }
+  .card .play{
+    all: unset; flex: 0 0 auto;
+    width: 30px; height: 30px; border-radius: 50%;
+    background: var(--accent); color: var(--accent-ink);
+    display:flex; align-items:center; justify-content:center;
+    font-size: 12px; cursor: pointer;
+  }
+  .card .meta{ min-width: 0; flex: 1 1 auto; }
+  .card .nm{ font-size: 13px; font-weight: 500; line-height: 1.25; white-space: nowrap; overflow:hidden; text-overflow: ellipsis; }
+  .card .sc{ font-size: 11px; font-style: italic; font-family:"Petrona",serif; color: var(--text-2); white-space: nowrap; overflow:hidden; text-overflow: ellipsis; }
+  .card .figs{ font-size: 10px; font-family:"IBM Plex Mono",monospace; color: var(--muted); margin-top: 2px; }
+
+  .table-tools{
+    display:flex; gap:10px; padding: 14px 18px; border-bottom: 1px solid var(--border);
+  }
+  input[type="search"]{
+    font: inherit; font-size: 13.5px; color: var(--text);
+    background: var(--surface-raised); border: 1px solid var(--border-strong);
+    border-radius: 7px; padding: 7px 10px; width: 100%; max-width: 280px;
+  }
+  .table-wrap{ overflow-x: auto; }
+  table{ width: 100%; border-collapse: collapse; font-size: 13px; min-width: 720px; }
+  thead th{
+    position: sticky; top: 0; background: var(--surface);
+    text-align: left; padding: 9px 14px; border-bottom: 1px solid var(--border-strong);
+    font-size: 10.5px; text-transform: uppercase; letter-spacing: 0.06em; color: var(--muted);
+    font-family: "IBM Plex Mono", monospace; white-space: nowrap;
+  }
+  thead th button{
+    all: unset; cursor: pointer; display:flex; align-items:center; gap:4px; color: inherit;
+  }
+  thead th button:hover{ color: var(--text); }
+  tbody td{ padding: 8px 14px; border-bottom: 1px solid var(--border); white-space: nowrap; }
+  tbody tr{ cursor: pointer; }
+  tbody tr:hover{ background: color-mix(in srgb, var(--accent) 7%, transparent); }
+  tbody tr.selected{ background: color-mix(in srgb, var(--accent) 14%, transparent); }
+  tbody tr.selected td.sp{ color: var(--accent); }
+  td.num{ font-family:"IBM Plex Mono",monospace; font-variant-numeric: tabular-nums; text-align: right; }
+  td.sp{ color: var(--text); font-weight: 500; }
+  td.sci{ color: var(--text-2); }
+
+  footer{
+    margin-top: 30px; font-size: 12px; color: var(--muted); line-height: 1.6;
+    border-top: 1px solid var(--border); padding-top: 16px;
+  }
+  footer a{ color: var(--accent); }
+
+  @media (max-width: 560px){
+    .field{ min-width: 130px; }
+    #plot{ height: 460px; }
+    #aplot{ height: 400px; }
+  }
+</style>
+
+<header>
+  <p class="eyebrow">Bioacoustic caption corpus</p>
+  <h1>AnimalSpeak Explorer</h1>
+  <p class="lede">
+    <b>AnimalSpeak</b> (David Robinson, HuggingFace) pairs <b>894,256</b> wildlife
+    field recordings with natural-language captions, pooled from Xeno-canto,
+    iNaturalist, the Animal Sound Archive and the Watkins Marine Mammal database.
+    The dataset itself ships no waveform-derived acoustics, only text, so the
+    first plot below measures the caption corpus: how often a species was
+    recorded, by how many distinct people, and how its captions are written.
+    For the second plot we went further and pulled the actual audio &mdash; real
+    pitch, loudness and spectral shape measured from the waveform of a sampled
+    recording per species.
+  </p>
+</header>
+
+<div class="stats">
+  <div class="stat"><div class="v mono">894,256</div><div class="k">Recordings</div></div>
+  <div class="stat"><div class="v mono">13,937</div><div class="k">Species catalogued</div></div>
+  <div class="stat"><div class="v mono">11,536</div><div class="k">Contributing recordists</div></div>
+  <div class="stat"><div class="v mono">5</div><div class="k">Source archives</div></div>
+  <div class="stat"><div class="v mono">39</div><div class="k">Clips analyzed for acoustics</div></div>
+</div>
+
+<section class="panel" id="spotlight">
+  <div class="panel-head spot-head">
+    <div>
+      <p class="eyebrow" id="spot-tag">Selected species</p>
+      <h2 id="spot-name">&mdash;</h2>
+      <p class="spot-sci" id="spot-sci"></p>
+    </div>
+    <button class="play spot-play" id="spot-play" aria-label="Play selected species clip" disabled>&#9654;</button>
+  </div>
+  <div class="spot-body">
+    <div id="spot-plot" aria-label="Animated pitch and loudness trajectory of the selected species' call"></div>
+    <div class="spot-grid" id="spot-grid"></div>
+  </div>
+  <p class="spot-note" id="spot-note"></p>
+</section>
+
+<section class="panel">
+  <div class="panel-head">
+    <div>
+      <h2>Per-species parameter space</h2>
+      <p>Each point is one species. Drag to orbit, scroll to zoom, hover for exact values.</p>
+    </div>
+  </div>
+
+  <div class="controls">
+    <div class="field">
+      <label for="sel-n">Species shown</label>
+      <select id="sel-n">
+        <option value="15">Top 15 by recordings</option>
+        <option value="30" selected>Top 30 by recordings</option>
+        <option value="60">Top 60 by recordings</option>
+      </select>
+    </div>
+    <div class="field">
+      <label for="sel-x">X axis</label>
+      <select id="sel-x"></select>
+    </div>
+    <div class="field">
+      <label for="sel-y">Y axis</label>
+      <select id="sel-y"></select>
+    </div>
+    <div class="field">
+      <label for="sel-z">Z axis</label>
+      <select id="sel-z"></select>
+    </div>
+    <div class="field">
+      <label for="sel-c">Color</label>
+      <select id="sel-c"></select>
+    </div>
+  </div>
+
+  <div id="plot"></div>
+
+  <div class="plot-foot">
+    <span>Marker size &prop; number of recordings</span>
+    <span class="swatch">Color scale <span class="ramp"></span> <span id="color-label"></span></span>
+  </div>
+</section>
+
+<section class="panel">
+  <div class="panel-head">
+    <div>
+      <h2>Acoustic fingerprints</h2>
+      <p>Real audio, not captions. For 39 species &mdash; birds, mammals (including six whales and dolphins), amphibians, insects and a reptile &mdash; we downloaded a field recording each, ran it through a 300&thinsp;Hz highpass filter and an FFT, and measured these parameters straight from the waveform. AnimalSpeak has no fish recordings: Xeno-canto and iNaturalist skew almost entirely to birds, and the dataset's only marine audio is whales and dolphins, not fish. Most mammal clips here are AnimalSpeak's own iNaturalist-sourced recordings; six cetaceans (Killer Whale, Common Dolphin, Long-finned Pilot Whale, Risso's Dolphin, Striped Dolphin, Bottlenose Dolphin) use public-domain NOAA&nbsp;Fisheries recordings instead, because AnimalSpeak's own source for them &mdash; the Watkins Marine Mammal archive &mdash; is hosted on a server that has been down for maintenance since this page was built.</p>
+    </div>
+  </div>
+
+  <div class="chips" id="class-chips"></div>
+
+  <div class="controls">
+    <div class="field">
+      <label for="asel-x">X axis</label>
+      <select id="asel-x"></select>
+    </div>
+    <div class="field">
+      <label for="asel-y">Y axis</label>
+      <select id="asel-y"></select>
+    </div>
+    <div class="field">
+      <label for="asel-z">Z axis</label>
+      <select id="asel-z"></select>
+    </div>
+    <div class="field">
+      <label for="asel-c">Color</label>
+      <select id="asel-c"></select>
+    </div>
+  </div>
+
+  <div id="aplot"></div>
+
+  <div class="plot-foot">
+    <span>Marker size &prop; loudness (RMS). Click a point, or a card below, to play its clip.</span>
+    <span class="swatch">Color scale <span class="ramp"></span> <span id="acolor-label"></span></span>
+  </div>
+
+  <div class="cards" id="cards"></div>
+</section>
+
+<section class="panel">
+  <div class="panel-head">
+    <div>
+      <h2>Species table</h2>
+      <p>Same rows as the plot above &mdash; click a column to sort.</p>
+    </div>
+  </div>
+  <div class="table-tools">
+    <input type="search" id="search" placeholder="Filter by species or scientific name&hellip;" aria-label="Filter species table">
+  </div>
+  <div class="table-wrap">
+    <table id="tbl">
+      <thead><tr id="thead-row"></tr></thead>
+      <tbody id="tbody"></tbody>
+    </table>
+  </div>
+</section>
+
+<footer>
+  Source: <span class="mono">davidrrobinson/AnimalSpeak</span> on Hugging Face. Corpus plot computed with pandas from the published caption/metadata parquet export;
+  recordist and source counts reflect attribution present in the metadata, not ground truth.
+  Acoustic clips are short excerpts (&le;6s, one per species), mostly re-encoded from the dataset's own linked Xeno-canto, iNaturalist and Tierstimmenarchiv recordings and credited to their original recordists via the source URL in the metadata.
+  Six whale/dolphin clips (marked in their spotlight card) come from NOAA Fisheries' public-domain ocean sound library instead, standing in for AnimalSpeak's own Watkins-sourced recordings of those species while that archive's host is offline.
+  Every clip is used here for analysis and playback only.
+</footer>
+
+<script>
+(function(){
+  "use strict";
+
+  var SPECIES = __SPECIES_JSON__;
+  var SPECIES_MAP = {};
+  SPECIES.forEach(function(r){ SPECIES_MAP[r.species] = r; });
+  var selectedSpecies = null;
+
+  var PARAMS = [
+    { key: "n_recordings",        label: "Recordings",                        fmt: fmtInt  },
+    { key: "log_recordings",      label: "Recordings (log₁₀)",       fmt: fmt2    },
+    { key: "n_recordists",        label: "Unique recordists",                 fmt: fmtInt  },
+    { key: "n_sources",           label: "Archive sources",                   fmt: fmtInt  },
+    { key: "avg_caption_len",     label: "Avg caption length (words)",        fmt: fmt2    },
+    { key: "avg_caption2_len",    label: "Avg scientific caption length",     fmt: fmt2    },
+    { key: "pct_known_recordist", label: "Recordist attribution (%)",         fmt: fmtPct  }
+  ];
+  var PMAP = {};
+  PARAMS.forEach(function(p){ PMAP[p.key] = p; });
+
+  function fmtInt(v){ return Math.round(v).toLocaleString("en-US"); }
+  function fmt2(v){ return Number(v).toFixed(2); }
+  function fmtPct(v){ return Number(v).toFixed(1) + "%"; }
+
+  function css(name){
+    return getComputedStyle(document.documentElement).getPropertyValue(name).trim();
+  }
+
+  function buildSelect(el, selectedKey){
+    el.innerHTML = "";
+    PARAMS.forEach(function(p){
+      var o = document.createElement("option");
+      o.value = p.key; o.textContent = p.label;
+      if (p.key === selectedKey) o.selected = true;
+      el.appendChild(o);
+    });
+  }
+
+  var selN = document.getElementById("sel-n");
+  var selX = document.getElementById("sel-x");
+  var selY = document.getElementById("sel-y");
+  var selZ = document.getElementById("sel-z");
+  var selC = document.getElementById("sel-c");
+  buildSelect(selX, "log_recordings");
+  buildSelect(selY, "n_recordists");
+  buildSelect(selZ, "avg_caption_len");
+  buildSelect(selC, "pct_known_recordist");
+
+  var plotEl = document.getElementById("plot");
+  var colorLabelEl = document.getElementById("color-label");
+
+  function currentRows(){
+    var n = parseInt(selN.value, 10);
+    return SPECIES.slice(0, n);
+  }
+
+  function sizeFor(rows){
+    var vals = rows.map(function(r){ return Math.sqrt(r.n_recordings); });
+    var lo = Math.min.apply(null, vals), hi = Math.max.apply(null, vals);
+    return vals.map(function(v){
+      if (hi === lo) return 16;
+      return 8 + (v - lo) / (hi - lo) * 24;
+    });
+  }
+
+  var colorscaleLight = [
+    [0, "#cde2fb"], [0.2, "#9ec5f4"], [0.4, "#6da7ec"],
+    [0.6, "#2a78d6"], [0.8, "#1c5cab"], [1, "#0d366b"]
+  ];
+  var colorscaleDark = [
+    [0, "#17324f"], [0.2, "#1c4674"], [0.4, "#205a95"],
+    [0.6, "#3987e5"], [0.8, "#6da7ec"], [1, "#cde2fb"]
+  ];
+
+  function isDark(){
+    var attr = document.documentElement.getAttribute("data-theme");
+    if (attr === "dark") return true;
+    if (attr === "light") return false;
+    return window.matchMedia && window.matchMedia("(prefers-color-scheme: dark)").matches;
+  }
+
+  function draw(){
+    var rows = currentRows();
+    var xk = selX.value, yk = selY.value, zk = selZ.value, ck = selC.value;
+    var sizes = sizeFor(rows);
+    var dark = isDark();
+
+    colorLabelEl.textContent = PMAP[ck].label;
+
+    var trace = {
+      type: "scatter3d",
+      mode: "markers",
+      x: rows.map(function(r){ return r[xk]; }),
+      y: rows.map(function(r){ return r[yk]; }),
+      z: rows.map(function(r){ return r[zk]; }),
+      text: rows.map(function(r){ return r.species; }),
+      customdata: rows.map(function(r){
+        return [r.scientific || "unresolved", PMAP[xk].fmt(r[xk]), PMAP[yk].fmt(r[yk]), PMAP[zk].fmt(r[zk]), PMAP[ck].fmt(r[ck])];
+      }),
+      marker: {
+        size: sizes,
+        color: rows.map(function(r){ return r[ck]; }),
+        colorscale: dark ? colorscaleDark : colorscaleLight,
+        showscale: false,
+        opacity: rows.map(function(r){ return r.species === selectedSpecies ? 1 : 0.82; }),
+        line: {
+          width: rows.map(function(r){ return r.species === selectedSpecies ? 3 : 0.5; }),
+          color: rows.map(function(r){ return r.species === selectedSpecies ? (dark ? "#ffffff" : "#0b0b0b") : (dark ? "#0d0d0d" : "#fcfcfb"); })
+        }
+      },
+      hovertemplate:
+        "<b>%{text}</b><br>" +
+        "<i>%{customdata[0]}</i><br><br>" +
+        xk_label() + ": %{customdata[1]}<br>" +
+        yk_label() + ": %{customdata[2]}<br>" +
+        zk_label() + ": %{customdata[3]}<br>" +
+        PMAP[ck].label + ": %{customdata[4]}" +
+        "<extra></extra>"
+    };
+
+    function xk_label(){ return PMAP[xk].label; }
+    function yk_label(){ return PMAP[yk].label; }
+    function zk_label(){ return PMAP[zk].label; }
+
+    var gridColor = dark ? "#2c2c2a" : "#e1e0d9";
+    var lineColor = dark ? "#3a3a37" : "#c3c2b7";
+    var textColor = dark ? "#c3c2b7" : "#52514e";
+    var bg = dark ? "#171716" : "#fcfcfb";
+
+    var axisStyle = function(title){
+      return {
+        title: { text: title, font: { size: 11, color: textColor, family: "IBM Plex Mono, monospace" } },
+        gridcolor: gridColor,
+        zerolinecolor: lineColor,
+        linecolor: lineColor,
+        tickfont: { size: 10, color: textColor, family: "IBM Plex Mono, monospace" },
+        showbackground: true,
+        backgroundcolor: bg
+      };
+    };
+
+    var layout = {
+      autosize: true,
+      uirevision: "keep",
+      margin: { l: 0, r: 0, t: 10, b: 0 },
+      paper_bgcolor: "rgba(0,0,0,0)",
+      scene: {
+        xaxis: axisStyle(PMAP[xk].label),
+        yaxis: axisStyle(PMAP[yk].label),
+        zaxis: axisStyle(PMAP[zk].label),
+        camera: { eye: { x: 1.6, y: 1.5, z: 1.1 } }
+      },
+      font: { family: "IBM Plex Sans, sans-serif" }
+    };
+
+    var config = { displaylogo: false, responsive: true,
+      modeBarButtonsToRemove: ["tableRotation","orbitRotation"] };
+
+    Plotly.react(plotEl, [trace], layout, config).then(function(){
+      plotEl.removeAllListeners && plotEl.removeAllListeners("plotly_click");
+      plotEl.on("plotly_click", function(ev){
+        if (!ev || !ev.points || !ev.points.length) return;
+        selectSpecies(ev.points[0].text, { autoplay: false });
+      });
+    });
+  }
+
+  // ---- table ----
+  var theadRow = document.getElementById("thead-row");
+  var tbody = document.getElementById("tbody");
+  var searchEl = document.getElementById("search");
+
+  var TABLE_COLS = [
+    { key: "species", label: "Species", type: "str" },
+    { key: "scientific", label: "Scientific name", type: "str" },
+    { key: "n_recordings", label: "Recordings", type: "num", fmt: fmtInt },
+    { key: "n_recordists", label: "Recordists", type: "num", fmt: fmtInt },
+    { key: "n_sources", label: "Sources", type: "num", fmt: fmtInt },
+    { key: "avg_caption_len", label: "Caption len.", type: "num", fmt: fmt2 },
+    { key: "pct_known_recordist", label: "Attrib. %", type: "num", fmt: fmtPct }
+  ];
+  var sortKey = "n_recordings", sortDir = -1;
+
+  function buildHead(){
+    theadRow.innerHTML = "";
+    TABLE_COLS.forEach(function(c){
+      var th = document.createElement("th");
+      if (c.type === "num") th.style.textAlign = "right";
+      var btn = document.createElement("button");
+      btn.textContent = c.label + (sortKey === c.key ? (sortDir === 1 ? " ↑" : " ↓") : "");
+      btn.addEventListener("click", function(){
+        if (sortKey === c.key) sortDir *= -1; else { sortKey = c.key; sortDir = c.type === "num" ? -1 : 1; }
+        buildHead(); renderTable();
+      });
+      th.appendChild(btn);
+      theadRow.appendChild(th);
+    });
+  }
+
+  function renderTable(){
+    var rows = currentRows().slice();
+    var q = searchEl.value.trim().toLowerCase();
+    if (q) {
+      rows = rows.filter(function(r){
+        return r.species.toLowerCase().indexOf(q) !== -1 ||
+          (r.scientific || "").toLowerCase().indexOf(q) !== -1;
+      });
+    }
+    rows.sort(function(a,b){
+      var av = a[sortKey], bv = b[sortKey];
+      if (typeof av === "string") return av.localeCompare(bv) * sortDir;
+      return (av - bv) * sortDir;
+    });
+    tbody.innerHTML = "";
+    rows.forEach(function(r){
+      var tr = document.createElement("tr");
+      if (r.species === selectedSpecies) tr.className = "selected";
+      tr.addEventListener("click", function(){ selectSpecies(r.species, { autoplay: false }); });
+      TABLE_COLS.forEach(function(c){
+        var td = document.createElement("td");
+        if (c.key === "species") { td.className = "sp"; td.textContent = r.species; }
+        else if (c.key === "scientific") { td.className = "sci"; td.innerHTML = r.scientific ? "<i>" + r.scientific + "</i>" : "—"; }
+        else { td.className = "num"; td.textContent = c.fmt(r[c.key]); }
+        tr.appendChild(td);
+      });
+      tbody.appendChild(tr);
+    });
+  }
+
+  function refreshAll(){ draw(); renderTable(); }
+
+  [selN, selX, selY, selZ, selC].forEach(function(el){ el.addEventListener("change", refreshAll); });
+  searchEl.addEventListener("input", renderTable);
+
+  buildHead();
+
+  // ---- acoustic fingerprints (real audio) ----
+  var AUDIO_SPECIES = __AUDIO_JSON__;
+  var AUDIO_MAP = {};
+  AUDIO_SPECIES.forEach(function(r){ AUDIO_MAP[r.species] = r; });
+
+  var FRAMES = __FRAMES_JSON__;
+  var currentFrames = null;
+
+  var CLASS_ORDER = ["Bird", "Mammal", "Amphibian", "Insect", "Reptile"];
+  var presentClasses = CLASS_ORDER.filter(function(c){
+    return AUDIO_SPECIES.some(function(r){ return r.class === c; });
+  });
+  var classFilter = new Set(presentClasses);
+
+  function visibleAudioRows(){
+    return AUDIO_SPECIES.filter(function(r){ return classFilter.has(r.class); });
+  }
+
+  var chipsEl = document.getElementById("class-chips");
+  function renderChips(){
+    chipsEl.innerHTML = "";
+    presentClasses.forEach(function(c){
+      var n = AUDIO_SPECIES.filter(function(r){ return r.class === c; }).length;
+      var chip = document.createElement("button");
+      chip.className = "chip" + (classFilter.has(c) ? " on" : "");
+      chip.style.setProperty("--tag-color", "var(--cat-" + c.toLowerCase() + ")");
+      chip.textContent = c + " (" + n + ")";
+      chip.addEventListener("click", function(){
+        if (classFilter.has(c)) classFilter.delete(c); else classFilter.add(c);
+        if (classFilter.size === 0) presentClasses.forEach(function(x){ classFilter.add(x); });
+        renderChips();
+        drawAcoustic();
+        renderCards();
+      });
+      chipsEl.appendChild(chip);
+    });
+  }
+  renderChips();
+
+  var AC_PARAMS = [
+    { key: "peak_freq_hz",          label: "Peak frequency (Hz)",     fmt: fmtHz  },
+    { key: "spectral_centroid_hz",  label: "Spectral centroid (Hz)",  fmt: fmtHz  },
+    { key: "spectral_bandwidth_hz", label: "Spectral bandwidth (Hz)", fmt: fmtHz  },
+    { key: "spectral_rolloff_hz",   label: "Spectral rolloff (Hz)",   fmt: fmtHz  },
+    { key: "rms_loudness",          label: "Loudness (RMS)",          fmt: fmt4   },
+    { key: "zero_crossing_rate",    label: "Zero-crossing rate",      fmt: fmt4   },
+    { key: "duration_s",            label: "Clip duration (s)",       fmt: fmt2   }
+  ];
+  var ACMAP = {};
+  AC_PARAMS.forEach(function(p){ ACMAP[p.key] = p; });
+  function fmtHz(v){ return Number(v).toFixed(0) + " Hz"; }
+  function fmt4(v){ return Number(v).toFixed(4); }
+
+  var aselX = document.getElementById("asel-x");
+  var aselY = document.getElementById("asel-y");
+  var aselZ = document.getElementById("asel-z");
+  var aselC = document.getElementById("asel-c");
+  function buildAcSelect(el, selectedKey){
+    el.innerHTML = "";
+    AC_PARAMS.forEach(function(p){
+      var o = document.createElement("option");
+      o.value = p.key; o.textContent = p.label;
+      if (p.key === selectedKey) o.selected = true;
+      el.appendChild(o);
+    });
+  }
+  buildAcSelect(aselX, "peak_freq_hz");
+  buildAcSelect(aselY, "spectral_centroid_hz");
+  buildAcSelect(aselZ, "spectral_bandwidth_hz");
+  buildAcSelect(aselC, "rms_loudness");
+
+  var aplotEl = document.getElementById("aplot");
+  var acolorLabelEl = document.getElementById("acolor-label");
+  var cardsEl = document.getElementById("cards");
+  var audioEls = {};
+
+  AUDIO_SPECIES.forEach(function(r){
+    var a = new Audio("audio/" + r.clip);
+    a.preload = "none";
+    a.addEventListener("play", syncPlayState);
+    a.addEventListener("pause", syncPlayState);
+    a.addEventListener("ended", syncPlayState);
+    audioEls[r.species] = a;
+  });
+
+  function stopAllAudio(){
+    Object.keys(audioEls).forEach(function(k){
+      audioEls[k].pause();
+      audioEls[k].currentTime = 0;
+    });
+  }
+
+  function playAudio(species){
+    stopAllAudio();
+    var a = audioEls[species];
+    if (a) { a.currentTime = 0; a.play().catch(function(){}); }
+  }
+
+  function syncPlayState(){
+    renderCards();
+    updateSpotPlayIcon();
+  }
+
+  // ---- unified cross-view selection ----
+  function selectSpecies(name, opts){
+    opts = opts || {};
+    selectedSpecies = name;
+    if (opts.autoplay && AUDIO_MAP[name]) playAudio(name);
+    draw();
+    drawAcoustic();
+    renderTable();
+    renderCards();
+    renderSpotlight();
+  }
+
+  function acSizes(rows){
+    var vals = rows.map(function(r){ return r.rms_loudness; });
+    var lo = Math.min.apply(null, vals), hi = Math.max.apply(null, vals);
+    return vals.map(function(v){
+      if (hi === lo) return 14;
+      return 8 + (v - lo) / (hi - lo) * 22;
+    });
+  }
+
+  function drawAcoustic(){
+    var rows = visibleAudioRows();
+    var xk = aselX.value, yk = aselY.value, zk = aselZ.value, ck = aselC.value;
+    var sizes = acSizes(rows);
+    var dark = isDark();
+    acolorLabelEl.textContent = ACMAP[ck].label;
+
+    var trace = {
+      type: "scatter3d",
+      mode: "markers",
+      x: rows.map(function(r){ return r[xk]; }),
+      y: rows.map(function(r){ return r[yk]; }),
+      z: rows.map(function(r){ return r[zk]; }),
+      text: rows.map(function(r){ return r.species; }),
+      customdata: rows.map(function(r){
+        return [r.scientific || "unresolved", ACMAP[xk].fmt(r[xk]), ACMAP[yk].fmt(r[yk]), ACMAP[zk].fmt(r[zk]), ACMAP[ck].fmt(r[ck])];
+      }),
+      marker: {
+        size: sizes,
+        color: rows.map(function(r){ return r[ck]; }),
+        colorscale: dark ? colorscaleDark : colorscaleLight,
+        showscale: false,
+        opacity: rows.map(function(r){ return r.species === selectedSpecies ? 1 : 0.82; }),
+        line: {
+          width: rows.map(function(r){ return r.species === selectedSpecies ? 3 : 0.5; }),
+          color: rows.map(function(r){ return r.species === selectedSpecies ? (dark ? "#ffffff" : "#0b0b0b") : (dark ? "#0d0d0d" : "#fcfcfb"); })
+        }
+      },
+      hovertemplate:
+        "<b>%{text}</b><br><i>%{customdata[0]}</i><br><br>" +
+        ACMAP[xk].label + ": %{customdata[1]}<br>" +
+        ACMAP[yk].label + ": %{customdata[2]}<br>" +
+        ACMAP[zk].label + ": %{customdata[3]}<br>" +
+        ACMAP[ck].label + ": %{customdata[4]}" +
+        "<extra></extra>"
+    };
+
+    var gridColor = dark ? "#2c2c2a" : "#e1e0d9";
+    var lineColor = dark ? "#3a3a37" : "#c3c2b7";
+    var textColor = dark ? "#c3c2b7" : "#52514e";
+    var bg = dark ? "#171716" : "#fcfcfb";
+    var axisStyle = function(title){
+      return {
+        title: { text: title, font: { size: 11, color: textColor, family: "IBM Plex Mono, monospace" } },
+        gridcolor: gridColor, zerolinecolor: lineColor, linecolor: lineColor,
+        tickfont: { size: 10, color: textColor, family: "IBM Plex Mono, monospace" },
+        showbackground: true, backgroundcolor: bg
+      };
+    };
+    var layout = {
+      autosize: true,
+      uirevision: "keep",
+      margin: { l: 0, r: 0, t: 10, b: 0 },
+      paper_bgcolor: "rgba(0,0,0,0)",
+      scene: {
+        xaxis: axisStyle(ACMAP[xk].label),
+        yaxis: axisStyle(ACMAP[yk].label),
+        zaxis: axisStyle(ACMAP[zk].label),
+        camera: { eye: { x: 1.6, y: 1.5, z: 1.1 } }
+      },
+      font: { family: "IBM Plex Sans, sans-serif" }
+    };
+    var config = { displaylogo: false, responsive: true };
+    Plotly.react(aplotEl, [trace], layout, config).then(function(){
+      aplotEl.removeAllListeners && aplotEl.removeAllListeners("plotly_click");
+      aplotEl.on("plotly_click", function(ev){
+        if (!ev || !ev.points || !ev.points.length) return;
+        selectSpecies(ev.points[0].text, { autoplay: true });
+      });
+    });
+  }
+
+  function renderCards(){
+    cardsEl.innerHTML = "";
+    visibleAudioRows().forEach(function(r){
+      var playing = r.species === selectedSpecies && audioEls[r.species] && !audioEls[r.species].paused;
+      var card = document.createElement("div");
+      card.className = "card" + (r.species === selectedSpecies ? " active" : "");
+      card.setAttribute("role", "button");
+      card.setAttribute("tabindex", "0");
+
+      var play = document.createElement("button");
+      play.className = "play";
+      play.setAttribute("aria-label", "Play " + r.species + " clip");
+      play.textContent = playing ? "⏸" : "▶";
+      play.addEventListener("click", function(e){
+        e.stopPropagation();
+        if (playing) { audioEls[r.species].pause(); }
+        else { selectSpecies(r.species, { autoplay: true }); }
+      });
+
+      var meta = document.createElement("div");
+      meta.className = "meta";
+      var nm = document.createElement("div"); nm.className = "nm"; nm.textContent = r.species;
+      var sc = document.createElement("div"); sc.className = "sc"; sc.textContent = r.scientific || "—";
+      var tag = document.createElement("div");
+      tag.className = "tag";
+      tag.style.setProperty("--tag-color", "var(--cat-" + (r.class || "bird").toLowerCase() + ")");
+      tag.textContent = r.class || "Bird";
+      var figs = document.createElement("div"); figs.className = "figs";
+      figs.textContent = fmtHz(r.peak_freq_hz) + " peak · " + fmtHz(r.spectral_centroid_hz) + " centroid";
+      meta.appendChild(nm); meta.appendChild(sc); meta.appendChild(tag); meta.appendChild(figs);
+
+      card.appendChild(play);
+      card.appendChild(meta);
+      card.addEventListener("click", function(){ selectSpecies(r.species, { autoplay: true }); });
+      cardsEl.appendChild(card);
+    });
+  }
+
+  [aselX, aselY, aselZ, aselC].forEach(function(el){ el.addEventListener("change", drawAcoustic); });
+
+  // ---- spotlight panel ----
+  var spotTag = document.getElementById("spot-tag");
+  var spotName = document.getElementById("spot-name");
+  var spotSci = document.getElementById("spot-sci");
+  var spotPlay = document.getElementById("spot-play");
+  var spotPlotEl = document.getElementById("spot-plot");
+  var spotGrid = document.getElementById("spot-grid");
+  var spotNote = document.getElementById("spot-note");
+
+  function addStat(label, value){
+    var g = document.createElement("div");
+    var v = document.createElement("div"); v.className = "gv"; v.textContent = value;
+    var k = document.createElement("div"); k.className = "gk"; k.textContent = label;
+    g.appendChild(v); g.appendChild(k);
+    spotGrid.appendChild(g);
+  }
+
+  function updateSpotPlayIcon(){
+    var a = selectedSpecies && audioEls[selectedSpecies];
+    spotPlay.textContent = (a && !a.paused) ? "⏸" : "▶";
+  }
+
+  function renderSpotlight(){
+    var name = selectedSpecies;
+    if (!name) return;
+    var corpus = SPECIES_MAP[name];
+    var audio = AUDIO_MAP[name];
+    var scientific = (corpus && corpus.scientific) || (audio && audio.scientific) || "";
+
+    var klass = audio && audio.class;
+    if (klass) {
+      spotTag.style.setProperty("--eyebrow-dot", "var(--cat-" + klass.toLowerCase() + ")");
+      spotTag.textContent = klass;
+    } else {
+      spotTag.style.removeProperty("--eyebrow-dot");
+      spotTag.textContent = "Selected species";
+    }
+
+    spotName.textContent = name;
+    spotSci.innerHTML = scientific ? "<i>" + scientific + "</i>" : "";
+
+    spotGrid.innerHTML = "";
+    if (corpus) {
+      addStat("Recordings", fmtInt(corpus.n_recordings));
+      addStat("Recordists", fmtInt(corpus.n_recordists));
+      addStat("Sources", fmtInt(corpus.n_sources));
+      addStat("Caption length", fmt2(corpus.avg_caption_len) + " w");
+    }
+    if (audio) {
+      addStat("Peak frequency", fmtHz(audio.peak_freq_hz));
+      addStat("Spectral centroid", fmtHz(audio.spectral_centroid_hz));
+      addStat("Bandwidth", fmtHz(audio.spectral_bandwidth_hz));
+      addStat("Loudness (RMS)", fmt4(audio.rms_loudness));
+    }
+
+    var slug = audio ? audio.clip.replace(/\.mp3$/, "") : null;
+    var frames = slug ? FRAMES[slug] : null;
+
+    if (audio && frames && frames.length) {
+      spotPlay.disabled = false;
+      renderTrajectory(frames);
+      spotNote.textContent = "Pitch and loudness traced from " + frames.length + " analysis frames (~46ms each) of the " +
+        audio.source_used + " recording — the marker travels along the path as the clip plays.";
+    } else {
+      spotPlay.disabled = !audio;
+      currentFrames = null;
+      Plotly.purge(spotPlotEl);
+      spotNote.textContent = audio
+        ? "Recording too short to trace a pitch path — shown from clip-level stats only."
+        : "No sampled audio clip for this species — shown from caption metadata only.";
+    }
+    updateSpotPlayIcon();
+  }
+
+  function trajectoryColorscale(dark){ return dark ? colorscaleDark : colorscaleLight; }
+
+  function renderTrajectory(frames){
+    var dark = isDark();
+    currentFrames = frames;
+
+    var trail = {
+      type: "scatter3d",
+      mode: "lines+markers",
+      x: frames.map(function(f){ return f.t; }),
+      y: frames.map(function(f){ return f.centroid; }),
+      z: frames.map(function(f){ return f.rms; }),
+      line: { width: 4, color: frames.map(function(f){ return f.centroid; }), colorscale: trajectoryColorscale(dark) },
+      marker: {
+        size: frames.map(function(f){ return 2.5 + f.rms * 34; }),
+        color: frames.map(function(f){ return f.centroid; }),
+        colorscale: trajectoryColorscale(dark),
+        opacity: 0.85
+      },
+      hovertemplate: "t = %{x:.2f}s<br>pitch = %{y:.0f} Hz<br>loudness = %{z:.3f}<extra></extra>",
+      showlegend: false
+    };
+    var playhead = {
+      type: "scatter3d",
+      mode: "markers",
+      x: [frames[0].t], y: [frames[0].centroid], z: [frames[0].rms],
+      marker: { size: 10, color: dark ? "#ffffff" : "#0b0b0b", line: { width: 2, color: dark ? "#3987e5" : "#2a78d6" } },
+      hoverinfo: "skip",
+      showlegend: false
+    };
+
+    var gridColor = dark ? "#2c2c2a" : "#e1e0d9";
+    var lineColor = dark ? "#3a3a37" : "#c3c2b7";
+    var textColor = dark ? "#c3c2b7" : "#52514e";
+    var bg = dark ? "#171716" : "#fcfcfb";
+    var axisStyle = function(title){
+      return {
+        title: { text: title, font: { size: 11, color: textColor, family: "IBM Plex Mono, monospace" } },
+        gridcolor: gridColor, zerolinecolor: lineColor, linecolor: lineColor,
+        tickfont: { size: 10, color: textColor, family: "IBM Plex Mono, monospace" },
+        showbackground: true, backgroundcolor: bg
+      };
+    };
+    var layout = {
+      autosize: true,
+      uirevision: "keep-spot",
+      margin: { l: 0, r: 0, t: 10, b: 0 },
+      paper_bgcolor: "rgba(0,0,0,0)",
+      scene: {
+        xaxis: axisStyle("Time (s)"),
+        yaxis: axisStyle("Pitch, spectral centroid (Hz)"),
+        zaxis: axisStyle("Loudness (RMS)"),
+        camera: { eye: { x: 1.5, y: -1.7, z: 0.9 } }
+      },
+      font: { family: "IBM Plex Sans, sans-serif" }
+    };
+    var config = { displaylogo: false, responsive: true };
+    Plotly.react(spotPlotEl, [trail, playhead], layout, config);
+  }
+
+  function tickPlayhead(){
+    if (selectedSpecies && currentFrames) {
+      var a = audioEls[selectedSpecies];
+      if (a && !a.paused && isFinite(a.duration) && a.duration > 0) {
+        var idx = Math.min(currentFrames.length - 1, Math.round((a.currentTime / a.duration) * (currentFrames.length - 1)));
+        var fr = currentFrames[idx];
+        Plotly.restyle(spotPlotEl, { x: [[fr.t]], y: [[fr.centroid]], z: [[fr.rms]] }, [1]);
+      }
+    }
+    requestAnimationFrame(tickPlayhead);
+  }
+  requestAnimationFrame(tickPlayhead);
+
+  spotPlay.addEventListener("click", function(){
+    if (!selectedSpecies || !audioEls[selectedSpecies]) return;
+    var a = audioEls[selectedSpecies];
+    if (!a.paused) a.pause(); else playAudio(selectedSpecies);
+  });
+
+  // ---- shared redraw on theme change / resize ----
+  function redrawAll(){
+    draw();
+    drawAcoustic();
+    if (selectedSpecies) renderSpotlight();
+  }
+  window.addEventListener("resize", function(){
+    Plotly.Plots.resize(plotEl);
+    Plotly.Plots.resize(aplotEl);
+    Plotly.Plots.resize(spotPlotEl);
+  });
+  if (window.matchMedia) {
+    window.matchMedia("(prefers-color-scheme: dark)").addEventListener("change", redrawAll);
+  }
+  new MutationObserver(redrawAll).observe(document.documentElement, { attributes: true, attributeFilter: ["data-theme"] });
+
+  // ---- initial state: spotlight the top species so the page opens filled in ----
+  selectSpecies(SPECIES[0].species, { autoplay: false });
+})();
+</script>
